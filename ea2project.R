@@ -4,6 +4,7 @@ library(ggplot2)
 library(nutshell)
 library(tidyverse)
 library(fastDummies)
+library(corrplot)
 
 #Lectura y limpieza de datos
 read_nba <- function(path){
@@ -28,19 +29,49 @@ nba <- nba_raw %>%
 
 exploranba <- nba_raw %>% 
   select_if(is.numeric) %>% 
-  select(-c(GP,W,L,MIN,`plus/minus`,FGM,FGA,`3PA`,`OREB`,`DREB`,`BLK`,`BLKA`,`FTM`,PFD))
+  select(-c(GP,W,L,MIN,`plus/minus`,FGM,FGA,`3PA`,`OREB`,`DREB`,`BLK`,`BLKA`,`FTM`,PFD,PF,AST))
 
 pairs(exploranba)
 summary(exploranba)
 apply(exploranba,2,sd)
-cor(exploranba)
 
+ggplot(nba, aes(`WIN%`*100, geom = "density", fill = conference)) + 
+  geom_histogram(bins= 100) + 
+  facet_grid(conference~.) + 
+  labs(title="Distribucion del porcentaje de victorias por conferencia",
+       y = "Conteo",
+       x = "Porcentaje")
 
-par(mfrow=c(2,2))
-for(i in 1:12){
-  hist(exploranba[,i], xlab = colnames(exploranba)[i], ylab = "frecuencia", main = "", breaks = 20)
-}
+ggplot(data = nba, aes(x = conference, y =`WIN%`*100 , fill = conference)) + 
+  geom_boxplot() + 
+  labs(y = "Porcentaje de victorias", x = "Conferencia")
 
-#Regresión
+corrplot(cor(exploranba, use = "complete.obs"), is.corr = T, 
+         method = "ellipse", diag = T,  addCoefasPercent = F, tl.col = "blue",addCoef.col = "red")
 
-#Análisis de supuestos, varianzas, heterocedasticidad, colinealidad
+ggplot(nba, aes(x=`WIN%`))+ geom_histogram(color="darkblue", fill="lightblue", bins =100)
+
+stars(exploranba,key.loc=c(-0.7,17))
+
+qqnorm(exploranba$`WIN%`)
+
+#Regresión e inferencia
+
+wreg<-lm(`WIN%`~ (`FG%`+PTS+`3PM` +`3P%` + FTA + `FT%` + REB + TOV + STL), data=nba)
+summary(wreg)
+
+#Análisis de supuestos, varianzas,colinealidad
+summary(aov(wreg))
+boxplot(wreg$residuals)
+
+#Observemos la homocedasticidad
+par(mfcol=c(3,3))
+ggplot(nba,aes(x=nba$`FG%`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`PTS`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`3PM`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`3P%`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`FTA`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`FT%`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`REB`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`TOV`, y=wreg$residuals)) +geom_point()
+ggplot(nba,aes(x=nba$`STL`, y=wreg$residuals)) +geom_point()
