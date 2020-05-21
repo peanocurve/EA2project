@@ -6,7 +6,8 @@ library(fastDummies)
 library(corrplot)
 library(readxl)
 
-#Lectura y limpieza de datos
+
+ye#Lectura y limpieza de datos
 read_nba <- function(path){
   path %>% 
     read_excel() %>% 
@@ -21,7 +22,8 @@ nba_raw <- dir("Documents/GitHub/EA2project/NBASEASONSUMMARY/",full.names = T) %
 nba <- nba_raw %>%
   left_join(divconf, by = c('TEAM' = 'team') ) %>% 
   dummy_cols(select_columns = 'conference') %>% 
-  dummy_cols(select_columns = 'division')
+  dummy_cols(select_columns = 'division') %>%
+  dummy_cols(select_columns = 'Year')
 
 
 ##Análisis exploratorio
@@ -89,8 +91,17 @@ wregconf<-lm(`WIN%`~ (`FG%`+PTS+`3PA` +`3P%` + FTA + `FT%` + REB + TOV + STL+ co
 summary(wregconf)
 
 #Regresión e inferencia sin considerar la conferencia
-wreg<-lm(`WIN%`~ (`FG%`+PTS+`3PA` +`3P%` + FTA + `FT%` + REB + TOV+ STL), data=nba)
+wreg<-lm(`WIN%`~ (`FG%`+PTS+`3PA`+`3P%` +FTA + `FT%` + REB+ TOV+ STL), data=nba)
 summary(wreg)
+plot(wreg)
+
+#Regresión utilizando un término cuadrático
+wreg<-lm(`WIN%`~ (`FG%`+I(PTS^2)+PTS+`3PA`+`3P%` +FTA + `FT%` + REB + TOV+ STL ), data=nba)
+summary(wreg)
+plot(wreg)
+
+#Regresión e inferencia considerando el año y la conferencia
+#(wreg<-lm(`WIN%`~ (`FG%`+`3PA`+`3P%` +FTA + `FT%` + DREB+ TOV+ STL+`Year_2010-2011`+`Year_2011-2012`+`Year_2012-2013`+`Year_2013-2014`+`Year_2014-2015`+`Year_2015-2016`+`Year_2016-2017`+`Year_2017-2018`+`Year_2018-2019`+`conference_Eastern`), data=nba)
 
 #Análisis de supuestos
 #ANNOVA
@@ -115,3 +126,4 @@ ggplot(nba,aes(x=nba$`FT%`, y=wreg$residuals)) +geom_point()
 ggplot(nba,aes(x=nba$`REB`, y=wreg$residuals)) +geom_point()
 ggplot(nba,aes(x=nba$`TOV`, y=wreg$residuals)) +geom_point()
 ggplot(nba,aes(x=nba$`STL`, y=wreg$residuals)) +geom_point()
+
